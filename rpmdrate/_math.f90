@@ -125,24 +125,33 @@ subroutine rfft(x,N)
     integer, intent(in) :: N
     double precision, intent(inout) :: x(N)
 
-    integer, parameter :: Nmax = 1024
+    integer, parameter :: Nmax = 64
     integer :: Np
-    double precision :: copy(Nmax), factor
+    double complex :: copy(Nmax), factor
+    double precision :: copyReal(Nmax)
     integer*8 :: plan
+    integer :: i
 
     data Np /0/
     save copy, factor, plan, Np
 
     if (N .ne. Np) then
         if (Np .ne. 0) call dfftw_destroy_plan(plan)
-        call dfftw_plan_r2r_1d(plan,N,copy,copy,0,64)
+        call dfftw_plan_dft_1d(plan,N,copy,copy,0,64)
         factor = dsqrt(1.d0/N)
         Np = N
     end if
 
     copy(1:N) = x
     call dfftw_execute(plan)
-    x = factor * copy(1:N)
+
+    ! Convert complex results to real ! Wenbin, FAN
+    do i = 1, N
+    copyReal(1:N/2+1) = real(copy(1:N/2+1)) ! First `N/2 + 1` are real
+    copyReal(N/2+2:) = aimag(copy(N/2+2:)) ! Besides are imaginary
+    end do
+
+    x = factor * copyReal(1:N)
 
 end subroutine rfft
 
@@ -158,10 +167,12 @@ subroutine irfft(x,N)
     integer, intent(in) :: N
     double precision, intent(inout) :: x(N)
 
-    integer, parameter :: Nmax = 1024
+    integer, parameter :: Nmax = 64
     integer :: Np
-    double precision :: copy(Nmax), factor
+    double complex :: copy(Nmax), inv(Nmax)
+    double precision :: copyReal(Nmax), factor
     integer*8 :: plan
+    integer :: i
 
     data Np /0/
     save copy, factor, plan, Np
@@ -171,14 +182,32 @@ subroutine irfft(x,N)
         ! must generate a new FFTW plan for the transform
         ! First delete the previous plan
         if (Np .ne. 0) call dfftw_destroy_plan(plan)
-        call dfftw_plan_r2r_1d(plan,N,copy,copy,1,64)
+        call dfftw_plan_dft_1d(plan,N,copy,copy,1,64)
         factor = dsqrt(1.d0/N)
         Np = N
     end if
 
-    copy(1:N) = x
+    ! Convert real to complex ! Wenbin, FAN
+    do i = 2, N/2
+    inv(i) = cmplx(x(i),-x(N-i+2))
+    end do
+    do i = N/2 + 2, N
+    inv(i) = cmplx(x(N-i+2),x(i))
+    end do
+    inv(1) = x(1)
+    inv(N/2+1) = x(N/2+1)
+
+    ! Inv. transformation
+    copy(1:N) = inv
     call dfftw_execute(plan)
-    x = factor * copy(1:N)
+
+    ! Rearrange the order ! Wenbin, FAN
+    copyReal(1) = copy(1)
+    do i = 2, N
+    copyReal(i) = copy(N-i+2)
+    end do
+
+    x = factor * copyReal(1:N)
 
 end subroutine irfft
 

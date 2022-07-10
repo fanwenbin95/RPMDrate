@@ -102,3 +102,41 @@ suite of unit tests using ::
 This will run all of the unit tests in sequence, which may take some time. If
 one or more unit tests fail, please report them on the GitHub issue tracker
 (if they aren't already reported).
+
+
+Modification
+============
+
+* Bug fix: zero variance would interrupt
+
+* Bug fix: `r2r` (real to real) FFT does not work. Replace with common complex FFT. 
+Then combine real and complex parts manually. 
+
+* Update: In `main.py`, `:.4f` -> `:.8f`, `:.6f` -> `:.10f`
+
+* Modify: max number of bead `Nmax`, 1024 -> 64. You should change this parameter in `math.f90` if you perform a calculation with more than 64 beads. 
+
+* Add: `.xyz` format of umbrella configurations
+
+* Add: free energy change (kcal/mol) in the rate file. 
+
+* Add: Print last frame of each trajectory in xyz format, include bead `umbrella_sampling_{0:.8f}_bead.xyz` and centroid `umbrella_sampling_{0:.8f}_centroid.xyz`. 
+The reaction coordinate and average energy present in the title line. 
+Coordinate is in Angstrom. 
+In the bead trajectory file, the momentum (in atomic unit, scientific format `14.8e`) 
+and the gradient (in kcal/mol per Angstrom, float format `14.8f`) present after 
+the coordinate. 
+
+* Add: Print energy of last frame in each trajectory in `umbrella_sampling_{0:.8f}_traj_info.dat`. 
+Column 1: evolved number of steps
+Below items are in one trajectory. 
+Column 2: sum of xi
+Column 3: sum of xi squared
+Column 4: average of xi
+Column 5: variance of xi
+Below items are average energy of the last frame in one trajectories in kcal/mol. 
+Column 6: potential energies
+Column 7: kinetic energy
+Column 8: ring energy
+Column 9: sum of these three energies
+Next Nbeads columns are the energies of each copy / image / bead of the system. 

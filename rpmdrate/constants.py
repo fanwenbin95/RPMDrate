@@ -84,3 +84,8 @@ c = 299792458
 
 #: The elementary charge :math:`e = 1.602176565 \times 10^{-19}` in :math:`\mathrm{C}`
 e = 1.602176565e-19
+
+# common unit conversion
+# example: A2B = 3.0 -> 1 A = 3.0 B
+Hartree2kcalpermol = 627.509474063056
+Bohr2Ang = 0.529177210903
