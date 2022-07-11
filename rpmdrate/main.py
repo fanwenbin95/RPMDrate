@@ -592,6 +592,8 @@ class RPMD:
                         if variance_ratio > math.sqrt(10.0) or variance_ratio < math.sqrt(0.1):
                             logging.warning('Discarding invalid umbrella sampling trajectory detected at xi = {0:g}: large jump in variance from {1:g} to {2:g}.'.format(xi, variance0, variance))
                             continue
+                    else:
+                        logging.warning('Too small variance at xi = {0:g}'.format(xi))
                 
                 # Update the mean and variance with the results from this trajectory
                 # Note that these are counted at each time step in each trajectory
@@ -640,7 +642,7 @@ class RPMD:
                 f.write(title_line + '\n')
                 for atom in range(self.Natoms):
                     for bead in range(self.Nbeads):
-                        f.write('{:.2s}  {:14.8f}  {:14.8f}  {:14.8f}    {:14.8e}  {:14.8e}  {:14.8e}    {:14.8f}  {:14.8f}  {:14.8f}  \n'.\
+                        f.write('{:.2s}  {:14.8f}  {:14.8f}  {:14.8f}    {:16.8e}  {:16.8e}  {:16.8e}    {:14.8f}  {:14.8f}  {:14.8f}  \n'.\
                         format(
                             self.reactants.atoms[atom], 
                             q[0, atom, bead] * constants.Bohr2Ang, 
@@ -1452,7 +1454,7 @@ class RPMD:
         f.write('k_RPMD(T)                               = {0:g} cm^3/(molecule*s)\n'.format(k_RPMD * fromAtomicUnits))
         f.write('                                        = {0:g} cm^3/(mol*s)\n\n'.format(k_RPMD * fromAtomicUnits * constants.Na))
 
-        deltaG = - self.beta * numpy.log(staticFactor) * constants.Hartree2kcalpermol
+        deltaG = - numpy.log(staticFactor) / self.beta * constants.Hartree2kcalpermol
         f.write('Free Energy Change                      = {0:.10f} kcal/mol\n\n'.format(deltaG))
         
         f.flush()
