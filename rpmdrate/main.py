@@ -685,6 +685,7 @@ class RPMD:
                     constants.Hartree2kcalpermol * Ering, 
                     constants.Hartree2kcalpermol * (Emean + Ek + Ering)
                     ))
+                v *= constants.Hartree2kcalpermol
                 bead_energy_line = '  '.join(['{:18.8f}'.format(bead_energy) for bead_energy in v])
                 f.write(bead_energy_line)
                 f.write('\n')
