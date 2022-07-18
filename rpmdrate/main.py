@@ -33,7 +33,6 @@ import os
 import os.path
 import sys
 import math
-from cv2 import log
 import numpy
 import logging
 
