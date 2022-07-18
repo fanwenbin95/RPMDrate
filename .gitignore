@@ -24,4 +24,6 @@ documentation/_build/*
 .pydevproject
 .settings/*
 
+.vscode/*
+.vscode
 .vscode/

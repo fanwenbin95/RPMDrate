@@ -89,3 +89,5 @@ e = 1.602176565e-19
 # example: A2B = 3.0 -> 1 A = 3.0 B
 Hartree2kcalpermol = 627.509474063056
 Bohr2Ang = 0.529177210903
+Hartree2eV = 27.211386245988
+au2ps = 2.4188843265857e-5

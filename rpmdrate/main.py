@@ -33,6 +33,7 @@ import os
 import os.path
 import sys
 import math
+from cv2 import log
 import numpy
 import logging
 
@@ -133,11 +134,11 @@ class Window:
         self.kforce = kforce
         self.trajectories = trajectories
         if equilibrationTime is not None:
-            self.equilibrationTime = float(quantity.convertTime(equilibrationTime, "ps")) / 2.418884326505e-5
+            self.equilibrationTime = float(quantity.convertTime(equilibrationTime, "ps")) / constants.au2ps
         else:
             self.equilibrationTime = None
         if evolutionTime is not None:
-            self.evolutionTime = float(quantity.convertTime(evolutionTime, "ps")) / 2.418884326505e-5
+            self.evolutionTime = float(quantity.convertTime(evolutionTime, "ps")) / constants.au2ps
         else:
             self.evolutionTime = None
         self.xi_range = xi_range
@@ -309,8 +310,8 @@ class RPMD:
         initial position for determining the configuration in the next window.
         """
         
-        dt = float(quantity.convertTime(dt, "ps")) / 2.418884326505e-5
-        evolutionTime = float(quantity.convertTime(evolutionTime, "ps")) / 2.418884326505e-5
+        dt = float(quantity.convertTime(dt, "ps")) / constants.au2ps
+        evolutionTime = float(quantity.convertTime(evolutionTime, "ps")) / constants.au2ps
         
         # Set the parameters for the RPMD calculation
         self.dt = dt
@@ -335,9 +336,9 @@ class RPMD:
         logging.info('==========')
         logging.info('Temperature                             = {0:g} K'.format(self.T))
         logging.info('Number of beads                         = {0:d}'.format(Nbeads))
-        logging.info('Time step                               = {0:g} ps'.format(self.dt * 2.418884326505e-5))
+        logging.info('Time step                               = {0:g} ps'.format(self.dt * constants.au2ps))
         logging.info('Number of umbrella integration windows  = {0:d}'.format(Nxi))
-        logging.info('Trajectory evolution time               = {0:g} ps ({1:d} steps)'.format(evolutionSteps * self.dt * 2.418884326505e-5, evolutionSteps))
+        logging.info('Trajectory evolution time               = {0:g} ps ({1:d} steps)'.format(evolutionSteps * self.dt * constants.au2ps, evolutionSteps))
         logging.info('')
 
         # Set up output files and directory
@@ -351,18 +352,25 @@ class RPMD:
         if os.path.exists(configurationsFilename):
             logging.info('Loading saved output from {0}'.format(configurationsFilename))
             xi_list0, q_initial0, equilibrationSteps0 = self.loadUmbrellaConfigurations(configurationsFilename)
-            if xi_list.shape[0] == xi_list0.shape[0] and all(numpy.abs(xi_list - xi_list0) < 1e-6):
-                logging.info('Using results of previously saved umbrella configurations.')
-                logging.info('')
-                xi_list = xi_list0
-                q_initial = q_initial0
-                self.umbrellaConfigurations = []
-                for l in range(Nxi):
-                    xi_current = xi_list[l]
-                    q_current = self.cleanGeometry(q_initial[:,:,l])
-                    self.umbrellaConfigurations.append((xi_current, q_current))
-                return
+            if xi_list.shape[0] == xi_list0.shape[0]:
+                if all(numpy.abs(xi_list - xi_list0) < 1e-6):
+                    logging.info('Using results of previously saved umbrella configurations.')
+                    logging.info('')
+                    xi_list = xi_list0
+                    q_initial = q_initial0
+                    self.umbrellaConfigurations = []
+                    for l in range(Nxi):
+                        xi_current = xi_list[l]
+                        q_current = self.cleanGeometry(q_initial[:,:,l])
+                        self.umbrellaConfigurations.append((xi_current, q_current))
+                    return
+                else:
+                    for i in range(len(xi_list)):
+                        if numpy.abs(xi_list[i] - xi_list0[i]) > 1e-6:
+                            logging.info('The xi does not match. Provide {}, need {}.'.format(xi_list[i], xi_list0[i]))
             else:
+                logging.info('The number of configurations is {}.'.format(xi_list.shape[0]))
+                logging.info('The number of configurations needed is {}.'.format(xi_list0.shape[0]))
                 logging.info('NOT using results of previously saved umbrella configurations.')           
         else:
             logging.info('Output will be saved to {0}'.format(configurationsFilename))
@@ -396,7 +404,7 @@ class RPMD:
             xi_current = xi_list[l]
             
             # Equilibrate in this window
-            logging.info('Generating configuration at xi = {0:.8f} for {1:g} ps...'.format(xi_current, evolutionSteps * self.dt * 2.418884326505e-5))
+            logging.info('Generating configuration at xi = {0:.8f} for {1:g} ps...'.format(xi_current, evolutionSteps * self.dt * constants.au2ps))
             p = self.sampleMomentum(Nbeads=Nbeads)
             result = system.equilibrate(0, p, q, evolutionSteps, xi_current, self.potential, kforce[l], False, False)
             logging.info('Finished generating configuration at xi = {0:.8f}.'.format(xi_current))
@@ -409,7 +417,7 @@ class RPMD:
             xi_current = xi_list[l]
             
             # Equilibrate in this window
-            logging.info('Generating configuration at xi = {0:.8f} for {1:g} ps...'.format(xi_current, evolutionSteps * self.dt * 2.418884326505e-5))
+            logging.info('Generating configuration at xi = {0:.8f} for {1:g} ps...'.format(xi_current, evolutionSteps * self.dt * constants.au2ps))
             p = self.sampleMomentum(Nbeads=Nbeads)
             result = system.equilibrate(0, p, q, evolutionSteps, xi_current, self.potential, kforce[l], False, False)
             logging.info('Finished generating configuration at xi = {0:.8f}.'.format(xi_current))
@@ -443,7 +451,7 @@ class RPMD:
             raise RPMDError('You must run generateUmbrellaConfigurations() before running computeStaticFactor().')
         
         # Set the parameters for the RPMD calculation
-        self.dt = dt = float(quantity.convertTime(dt, "ps")) / 2.418884326505e-5
+        self.dt = dt = float(quantity.convertTime(dt, "ps")) / constants.au2ps
         Nwindows = len(windows)
         thermostat = self.thermostat
         self.mode = 1
@@ -471,7 +479,7 @@ class RPMD:
         logging.info('==========')
         logging.info('Temperature                             = {0:g} K'.format(self.T))
         logging.info('Number of beads                         = {0:d}'.format(self.Nbeads))
-        logging.info('Time step                               = {0:g} ps'.format(self.dt * 2.418884326505e-5))
+        logging.info('Time step                               = {0:g} ps'.format(self.dt * constants.au2ps))
         logging.info('Number of umbrella integration windows  = {0:d}'.format(Nwindows))
         logging.info('')
 
@@ -507,10 +515,10 @@ class RPMD:
                 f.write('**********************\n\n')
                 f.write('Temperature                             = {0:g} K\n'.format(self.T))
                 f.write('Number of beads                         = {0:d}\n'.format(self.Nbeads))
-                f.write('Time step                               = {0:g} ps\n'.format(self.dt * 2.418884326505e-5))
+                f.write('Time step                               = {0:g} ps\n'.format(self.dt * constants.au2ps))
                 f.write('Reaction coordinate                     = {0:.8f}\n'.format(window.xi))
-                f.write('Equilibration time                      = {0:g} ps ({1:d} steps)\n'.format(equilibrationSteps * self.dt * 2.418884326505e-5, equilibrationSteps))
-                f.write('Trajectory evolution time               = {0:g} ps ({1:d} steps)\n'.format(evolutionSteps * self.dt * 2.418884326505e-5, evolutionSteps))
+                f.write('Equilibration time                      = {0:g} ps ({1:d} steps)\n'.format(equilibrationSteps * self.dt * constants.au2ps, equilibrationSteps))
+                f.write('Trajectory evolution time               = {0:g} ps ({1:d} steps)\n'.format(evolutionSteps * self.dt * constants.au2ps, evolutionSteps))
                 f.write('Force constant                          = {0:g}\n'.format(window.kforce))
                 if window.xi_range:
                     f.write('Valid reaction coordinate range         = {0:g}\n'.format(window.xi_range))
@@ -568,7 +576,7 @@ class RPMD:
                     results.append([window, pool.apply_async(runUmbrellaTrajectory, args)])
                 else:
                     results.append([window, runUmbrellaTrajectory(*args)])
-              
+
             count = 0  
             for window, result in results:
 
@@ -825,10 +833,10 @@ class RPMD:
             index = numpy.argmax(self.potentialOfMeanForce[1,:])
             xi_current = self.potentialOfMeanForce[0,index]
         
-        dt = float(quantity.convertTime(dt, "ps")) / 2.418884326505e-5
-        equilibrationTime = float(quantity.convertTime(equilibrationTime, "ps")) / 2.418884326505e-5
-        childEvolutionTime = float(quantity.convertTime(childEvolutionTime, "ps")) / 2.418884326505e-5
-        childSamplingTime = float(quantity.convertTime(childSamplingTime, "ps")) / 2.418884326505e-5
+        dt = float(quantity.convertTime(dt, "ps")) / constants.au2ps
+        equilibrationTime = float(quantity.convertTime(equilibrationTime, "ps")) / constants.au2ps
+        childEvolutionTime = float(quantity.convertTime(childEvolutionTime, "ps")) / constants.au2ps
+        childSamplingTime = float(quantity.convertTime(childSamplingTime, "ps")) / constants.au2ps
         equilibrationSteps = int(round(equilibrationTime / dt))
         childEvolutionSteps = int(round(childEvolutionTime / dt))
         childSamplingSteps = int(round(childSamplingTime / dt))
@@ -877,11 +885,11 @@ class RPMD:
         logging.info('Temperature                             = {0:g} K'.format(self.T))
         logging.info('Number of beads                         = {0:d}'.format(self.Nbeads))
         logging.info('Reaction coordinate                     = {0:.8f}'.format(xi_current))
-        logging.info('Time step                               = {0:g} ps'.format(self.dt * 2.418884326505e-5))
+        logging.info('Time step                               = {0:g} ps'.format(self.dt * constants.au2ps))
         logging.info('Total number of child trajectories      = {0:d}'.format(childTrajectories))
-        logging.info('Initial parent equilibration time       = {0:g} ps ({1:d} steps)'.format(equilibrationSteps * self.dt * 2.418884326505e-5, equilibrationSteps))
-        logging.info('Frequency of child trajectory sampling  = {0:g} ps ({1:d} steps)'.format(childSamplingSteps * self.dt * 2.418884326505e-5, childSamplingSteps))
-        logging.info('Length of child trajectories            = {0:g} ps ({1:d} steps)'.format(childEvolutionSteps * self.dt * 2.418884326505e-5, childEvolutionSteps))
+        logging.info('Initial parent equilibration time       = {0:g} ps ({1:d} steps)'.format(equilibrationSteps * self.dt * constants.au2ps, equilibrationSteps))
+        logging.info('Frequency of child trajectory sampling  = {0:g} ps ({1:d} steps)'.format(childSamplingSteps * self.dt * constants.au2ps, childSamplingSteps))
+        logging.info('Length of child trajectories            = {0:g} ps ({1:d} steps)'.format(childEvolutionSteps * self.dt * constants.au2ps, childEvolutionSteps))
         logging.info('Number of children per sampling         = {0:d}'.format(childrenPerSampling))
         logging.info('')
         
@@ -929,7 +937,7 @@ class RPMD:
             
             # Equilibrate parent trajectory while constraining to dividing surface
             # and sampling from Andersen thermostat
-            logging.info('Equilibrating parent trajectory for {0:g} ps...'.format(equilibrationSteps * self.dt * 2.418884326505e-5))
+            logging.info('Equilibrating parent trajectory for {0:g} ps...'.format(equilibrationSteps * self.dt * constants.au2ps))
             result = 1
             while result != 0:
                 q = numpy.asfortranarray(q0.copy())
@@ -944,7 +952,7 @@ class RPMD:
             parentIter = 0
             while childCount < childTrajectories:
                 
-                logging.info('Sampling {0} child trajectories at {1:g} ps...'.format(childrenPerSampling, parentIter * childSamplingSteps * self.dt * 2.418884326505e-5))
+                logging.info('Sampling {0} child trajectories at {1:g} ps...'.format(childrenPerSampling, parentIter * childSamplingSteps * self.dt * constants.au2ps))
     
                 # Sample a number of child trajectories using the current parent
                 # configuration
@@ -971,7 +979,7 @@ class RPMD:
                     kappa_num += num
                     kappa_denom += denom
             
-                logging.info('Finished sampling {0} child trajectories at {1:g} ps.'.format(childrenPerSampling, parentIter * childSamplingSteps * self.dt * 2.418884326505e-5))
+                logging.info('Finished sampling {0} child trajectories at {1:g} ps.'.format(childrenPerSampling, parentIter * childSamplingSteps * self.dt * constants.au2ps))
                 
                 self.saveRecrossingFactor(recrossingFilename, kappa_num, kappa_denom, childCount,
                     childTrajectories, equilibrationSteps, childSamplingSteps, childEvolutionSteps, childrenPerSampling)
@@ -981,7 +989,7 @@ class RPMD:
                                 
                 # Further evolve parent trajectory while constraining to dividing
                 # surface and sampling from Andersen thermostat
-                logging.info('Evolving parent trajectory to {0:g} ps...'.format((parentIter+1) * childSamplingSteps * self.dt * 2.418884326505e-5))
+                logging.info('Evolving parent trajectory to {0:g} ps...'.format((parentIter+1) * childSamplingSteps * self.dt * constants.au2ps))
                 result = system.equilibrate(0, p, q, childSamplingSteps, self.xi_current, self.potential, 0.0, True, saveParentTrajectory)
                 while result != 0:
                     q = numpy.asfortranarray(q0.copy())
@@ -1000,8 +1008,8 @@ class RPMD:
         logging.info('=========== ===========')
         
         for childStep in range(childEvolutionSteps):
-            logging.info('{0:11.3f} {1:11.6f}'.format(
-                childStep * self.dt * 2.418884326505e-2,
+            logging.info('{0:12.6f}  {1:20.12f}'.format(
+                childStep * self.dt * constants.au2ps * 1000, # 1000 fs = 1 ps
                 kappa_num[childStep] / kappa_denom,
             ))
         logging.info('=========== ===========')
@@ -1049,9 +1057,9 @@ class RPMD:
 
         f.write('Temperature                             = {0:g} K\n'.format(self.T))
         f.write('Number of beads                         = 1\n')
-        f.write('Time step                               = {0:g} ps\n'.format(self.dt * 2.418884326505e-5))
+        f.write('Time step                               = {0:g} ps\n'.format(self.dt * constants.au2ps))
         f.write('Number of umbrella integration windows  = {0:d}\n'.format(len(self.umbrellaConfigurations)))
-        f.write('Trajectory evolution time               = {0:g} ps ({1:d} steps)\n\n'.format(evolutionSteps * self.dt * 2.418884326505e-5, evolutionSteps))
+        f.write('Trajectory evolution time               = {0:g} ps ({1:d} steps)\n\n'.format(evolutionSteps * self.dt * constants.au2ps, evolutionSteps))
         
         for xi, q in self.umbrellaConfigurations:
             f.write('xi = {0:.8f}\n'.format(xi))
@@ -1103,7 +1111,7 @@ class RPMD:
             elif param == 'Number of beads':
                 Nbeads = int(data[0])
             elif param == 'Time step':
-                dt = float(data[0]) / 2.418884326505e-5
+                dt = float(data[0]) / constants.au2ps
             elif param == 'Number of umbrella integration windows':
                 Nxi = int(data[0])
             elif param == 'Trajectory evolution time':
@@ -1160,7 +1168,7 @@ class RPMD:
             elif param == 'Number of beads':
                 Nbeads = int(data[0])
             elif param == 'Time step':
-                dt = float(data[0]) / 2.418884326505e-5
+                dt = float(data[0]) / constants.au2ps
             elif param == 'Reaction coordinate':
                 xi = float(data[0])
             elif param == 'Equilibration time':
@@ -1250,9 +1258,9 @@ class RPMD:
         f.write('Rxn coord   PMF (eV)\n')
         f.write('=========== ===============\n')
         for n in range(0, self.potentialOfMeanForce.shape[1]):
-            f.write('{0:11.6f} {1:11.10f}\n'.format(
+            f.write('{0:11.8f}  {1:11.10f}\n'.format(
                 self.potentialOfMeanForce[0,n],
-                self.potentialOfMeanForce[1,n] * 27.211,
+                self.potentialOfMeanForce[1,n] * constants.Hartree2eV,
             ))
         f.write('=========== ===============\n')
 
@@ -1304,7 +1312,7 @@ class RPMD:
         for n in range(bins):
             xi, A = f.readline().strip().split()
             self.potentialOfMeanForce[0,n] = float(xi)
-            self.potentialOfMeanForce[1,n] = float(A) / 27.211
+            self.potentialOfMeanForce[1,n] = float(A) / constants.Hartree2eV
         line = f.readline()
 
         f.close()
@@ -1327,11 +1335,11 @@ class RPMD:
         f.write('Temperature                             = {0:g} K\n'.format(self.T))
         f.write('Number of beads                         = {0:d}\n'.format(self.Nbeads))
         f.write('Reaction coordinate                     = {0:.8f}\n'.format(self.xi_current))
-        f.write('Time step                               = {0:g} ps\n'.format(self.dt * 2.418884326505e-5))
+        f.write('Time step                               = {0:g} ps\n'.format(self.dt * constants.au2ps))
         f.write('Total number of child trajectories      = {0:d}\n'.format(childTrajectories))
-        f.write('Initial parent equilibration time       = {0:g} ps ({1:d} steps)\n'.format(equilibrationSteps * self.dt * 2.418884326505e-5, equilibrationSteps))
-        f.write('Frequency of child trajectory sampling  = {0:g} ps ({1:d} steps)\n'.format(childSamplingSteps * self.dt * 2.418884326505e-5, childSamplingSteps))
-        f.write('Length of child trajectories            = {0:g} ps ({1:d} steps)\n'.format(childEvolutionSteps * self.dt * 2.418884326505e-5, childEvolutionSteps))
+        f.write('Initial parent equilibration time       = {0:g} ps ({1:d} steps)\n'.format(equilibrationSteps * self.dt * constants.au2ps, equilibrationSteps))
+        f.write('Frequency of child trajectory sampling  = {0:g} ps ({1:d} steps)\n'.format(childSamplingSteps * self.dt * constants.au2ps, childSamplingSteps))
+        f.write('Length of child trajectories            = {0:g} ps ({1:d} steps)\n'.format(childEvolutionSteps * self.dt * constants.au2ps, childEvolutionSteps))
         f.write('Number of children per sampling         = {0:d}\n\n'.format(childrenPerSampling))
         
         kappa_denom = float(kappa_denom)
@@ -1340,7 +1348,7 @@ class RPMD:
         f.write('Time (fs) kappa_num     kappa_denom   count     kappa (old) kappa (new)\n')
         f.write('========= ============= ============= ========= =========== ===========\n')
         for n in range(kappa_num.shape[0]):
-            f.write('{0:9.3f} {1:13.4f} {2:13.4f} {3:9d} {4:11.6f} {5:11.6f}\n'.format(
+            f.write('{0:9.3f} {1:13.4f} {2:13.4f} {3:9d} {4:11.6f} {5:20.12f}\n'.format(
                 n * self.dt * 2.418884326505e-2,
                 kappa_num[n],
                 kappa_denom,
@@ -1385,7 +1393,7 @@ class RPMD:
             elif param == 'Reaction coordinate':
                 xi_current = float(data[0])
             elif param == 'Time step':
-                dt = float(data[0]) / 2.418884326505e-5
+                dt = float(data[0]) / constants.au2ps
             elif param == 'Total number of child trajectories':
                 childTrajectories = int(data[0])
             elif param == 'Initial parent equilibration time':

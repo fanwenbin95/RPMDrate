@@ -111,7 +111,7 @@ Modification
 
 * **Bug fix**: `r2r` (real to real) FFT does not work. Replace with common complex FFT. Then combine real and complex parts manually. 
 
-* **Update**: In `main.py`, `:.4f` -> `:.8f`, `:.6f` -> `:.10f`. Especially, the reaction coordinate ($\xi$) would be enough to  
+* **Update**: In `main.py`, `:.4f` -> `:.8f`, `:.6f` -> `:.10f`. Especially, the reaction coordinate ($\xi$) would be written full.  
 
 * **Modify**: max number of bead `Nmax`, 1024 -> 64. You should change this parameter in `math.f90` if you perform a calculation with more than 64 beads. 
 
