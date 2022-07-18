@@ -119,7 +119,7 @@ Modification
 
 * **Add**: free energy change (kcal/mol) in the rate file. 
 
-* **Add**: Print last frame of each trajectory in xyz format, include bead `umbrella_sampling_{0:.8f}_bead.xyz` and centroid `umbrella_sampling_{0:.8f}_centroid.xyz`. The reaction coordinate and average energy present in the title line. Coordinate is in Angstrom. In the bead trajectory file, the momentum (in atomic unit, scientific format `14.8e`) and the gradient (in kcal/mol per Angstrom, float format `14.8f`) present after the coordinate. 
+* **Add**: Print last frame of each trajectory in xyz format, include bead `umbrella_sampling_{0:.8f}_bead.xyz` and centroid `umbrella_sampling_{0:.8f}_centroid.xyz`. The reaction coordinate, average energy, and centroid energy present in the title line. Coordinate is in Angstrom. In the bead trajectory file, the momentum (in atomic unit, scientific format `14.8e`) and the gradient (in kcal/mol per Angstrom, float format `14.8f`) present after the coordinate. In the centroid trajectory file, the gyration radius (in Angstrom) present after the coordinate. 
 
 * **Add**: Print energy of last frame in each trajectory in `umbrella_sampling_{0:.8f}_traj_info.dat`. 
     * Column 1: evolved number of steps
@@ -129,8 +129,9 @@ Modification
         * Column 4: average of xi
         * Column 5: variance of xi
     * Below items are average energy of the last frame in one trajectories in kcal/mol. 
-        * Column 6: potential energies
-        * Column 7: kinetic energy
-        * Column 8: ring energy
-        * Column 9: sum of these three energies
+        * Column 6: potential energy of centroid
+        * Column 7: mean potential energy (Emean)
+        * Column 8: kinetic energy (Ek)
+        * Column 9: ring energy (Ering)
+        * Column 10: total energy (Emean, Ek, Ering)
     * Next Nbeads columns are the energies of each copy / image / bead of the system. 

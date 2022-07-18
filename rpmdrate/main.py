@@ -635,13 +635,20 @@ class RPMD:
                     for bead in range(self.Nbeads):
                         q[:, atom, bead] -= cm[:]
                 xi_now, dxi, d2xi = system.get_reaction_coordinate(q_centroid, window.xi)
+                r_gyration = system.get_radius_of_gyration(q, self.Natoms, self.Nbeads)
                 # get potential from Python again
                 ## notice that the v[0:Nbead], dvdq[0:3, 0:Nbead]
-                v, dvdq, result = self.potential(q)
+                v, dvdq, pot_result = self.potential(q)
                 Emean = numpy.mean(v)
+                cent_v, cent_dvdq, pot_cent_result = self.potential(q_centroid)
 
-                title_line = '{:12d}  xi= {:12.8f}  Mean potential= {:14.8f} kcal/mol'.\
-                    format(window.count, xi_now, Emean * constants.Hartree2kcalpermol).lstrip()
+                title_line = '{:12d}  xi= {:12.8f}  Mean pot= {:14.8f}  Cent pot= {:14.8f} kcal/mol'.\
+                    format(
+                        window.count, 
+                        xi_now, 
+                        Emean * constants.Hartree2kcalpermol,
+                        cent_v[0] * constants.Hartree2kcalpermol
+                        ).lstrip()
 
                 beadTrajFilename = os.path.join(workingDirectory, 'umbrella_sampling_{0:.8f}_bead.xyz'.format(window.xi))
                 f = open(beadTrajFilename, 'a')
@@ -670,11 +677,12 @@ class RPMD:
                 f.write('{:g}\n'.format(self.Natoms))
                 f.write(title_line + '\n')
                 for atom in range(self.Natoms):
-                    f.write('{:.2s}  {:14.8f}  {:14.8f}  {:14.8f}  \n'.format(
+                    f.write('{:.2s}  {:14.8f}  {:14.8f}  {:14.8f}   {:14.8f}\n'.format(
                             self.reactants.atoms[atom], 
                             q_centroid[0, atom] * constants.Bohr2Ang, 
                             q_centroid[1, atom] * constants.Bohr2Ang, 
                             q_centroid[2, atom] * constants.Bohr2Ang,
+                            r_gyration[atom] * constants.Bohr2Ang
                         ))
                 f.flush()
                 f.close()
@@ -685,8 +693,9 @@ class RPMD:
                 dvariance = dav2 / dcount - dmean * dmean
                 infoTrajFilename = os.path.join(workingDirectory, 'umbrella_sampling_{0:.8f}_traj_info.dat'.format(window.xi))
                 f = open(infoTrajFilename, 'a')
-                f.write('{:12d}  {:18.10f}  {:18.10f}  {:16.8e}  {:16.8e}    {:14.8f}  {:18.8f}  {:18.8f}  {:18.8e}    '.format(
+                f.write('{:12d}  {:18.10f}  {:18.10f}  {:16.8e}  {:16.8e}  |  {:18.8f}  {:18.8f}  {:18.8f}  {:18.8f}  {:18.8e}  |  '.format(
                     window.count, dav, dav2, dmean, dvariance, 
+                    constants.Hartree2kcalpermol * cent_v[0],
                     constants.Hartree2kcalpermol * Emean, 
                     constants.Hartree2kcalpermol * Ek, 
                     constants.Hartree2kcalpermol * Ering, 
